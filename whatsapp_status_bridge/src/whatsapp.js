@@ -52,27 +52,13 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds, link
   // code is a short string typed into WhatsApp (Settings > Linked Devices > Link
   // with phone number instead) — no image to render or fit anywhere. Falls back
   // to printing the QR (below) only when no phone number is configured.
-  //
-  // requestPairingCode sends a request over the raw WebSocket, which throws
-  // "Connection Closed" if called before that socket has actually opened —
-  // sock.ws.isOpen reflects the WebSocket's own ready state directly, so it's
-  // the correct signal to wait on (independent of Baileys' higher-level
-  // connection.update/'open', which for an unregistered device doesn't fire
-  // until pairing completes).
   if (linkPhoneNumber && !state.creds.registered) {
-    const requestPairingCode = () => {
-      sock.requestPairingCode(linkPhoneNumber).then((code) => {
-        console.log(`WhatsApp pairing code for ${linkPhoneNumber}: ${code}`);
-        console.log('Enter this in WhatsApp: Settings > Linked Devices > Link a Device > Link with phone number instead.');
-      }).catch((err) => {
-        console.error('Failed to request WhatsApp pairing code:', err);
-      });
-    };
-    if (sock.ws.isOpen) {
-      requestPairingCode();
-    } else {
-      sock.ws.on('open', requestPairingCode);
-    }
+    sock.requestPairingCode(linkPhoneNumber).then((code) => {
+      console.log(`WhatsApp pairing code for ${linkPhoneNumber}: ${code}`);
+      console.log('Enter this in WhatsApp: Settings > Linked Devices > Link a Device > Link with phone number instead.');
+    }).catch((err) => {
+      console.error('Failed to request WhatsApp pairing code:', err);
+    });
   }
 
   sock.ev.on('connection.update', (update) => {
