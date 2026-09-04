@@ -4,6 +4,7 @@ set -e
 source /usr/lib/bashio/bashio.sh
 
 export ALLOWED_NUMBERS="$(bashio::config 'allowed_numbers')"
+export LINK_PHONE_NUMBER="$(bashio::config 'link_phone_number')"
 export BATTERY_LOW_PCT="$(bashio::config 'battery_low_pct')"
 export PM25_THRESHOLD="$(bashio::config 'pm25_threshold')"
 export CO2_THRESHOLD="$(bashio::config 'co2_threshold')"
