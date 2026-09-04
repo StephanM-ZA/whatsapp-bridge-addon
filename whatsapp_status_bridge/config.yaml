@@ -1,0 +1,30 @@
+name: WhatsApp Status Bridge
+version: "0.1.0"
+slug: whatsapp_status_bridge
+description: Reply to a WhatsApp "Status" message with a home status summary
+arch:
+  - aarch64
+startup: services
+boot: auto
+init: false
+homeassistant_api: true
+map:
+  - data:rw
+
+options:
+  allowed_numbers: ""
+  battery_low_pct: 20
+  pm25_threshold: 22
+  co2_threshold: 800
+  shower_temp_c: 35
+  grid_import_threshold_w: 100
+  solar_forecast_high_kwh: 10
+
+schema:
+  allowed_numbers: str
+  battery_low_pct: int
+  pm25_threshold: int
+  co2_threshold: int
+  shower_temp_c: int
+  grid_import_threshold_w: int
+  solar_forecast_high_kwh: float
