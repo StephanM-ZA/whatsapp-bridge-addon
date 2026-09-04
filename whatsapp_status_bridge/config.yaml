@@ -1,5 +1,5 @@
 name: WhatsApp Status Bridge
-version: "0.2.0"
+version: "0.1.0"
 slug: whatsapp_status_bridge
 description: Reply to a WhatsApp "Status" message with a home status summary
 arch:
@@ -13,7 +13,6 @@ map:
 
 options:
   allowed_numbers: ""
-  link_phone_number: ""
   battery_low_pct: 20
   pm25_threshold: 22
   co2_threshold: 800
@@ -23,7 +22,6 @@ options:
 
 schema:
   allowed_numbers: str
-  link_phone_number: str?
   battery_low_pct: int
   pm25_threshold: int
   co2_threshold: int

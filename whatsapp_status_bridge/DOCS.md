@@ -11,16 +11,9 @@ air quality, air purifiers, and weather.
    that are allowed to trigger a status reply. **This must be set before the
    first start** — if `allowed_numbers` is left empty, the add-on exits
    immediately with an error instead of silently showing a QR code.
-2. Set `link_phone_number` to the WhatsApp number you want the bridge to
-   link as (international format, no `+`, e.g. `27821234567`) — this is
-   **strongly recommended**: the alternative (leaving it blank) prints a QR
-   code in the Log tab, and WhatsApp's QR payload is dense enough that it
-   often doesn't fit in a log viewer's width.
-3. Start the add-on and open its Log tab. With `link_phone_number` set, it
-   prints a short pairing code instead of a QR — enter it in WhatsApp:
-   Settings → Linked Devices → Link a Device → **Link with phone number
-   instead**. (If `link_phone_number` is left blank, scan the printed QR
-   code from Linked Devices → Link a Device instead.)
+2. Start the add-on and open its Log tab — a QR code will be printed there.
+3. Scan it with WhatsApp (Linked Devices → Link a Device) from the account you
+   want the bridge to send/receive as.
 4. Once linked, text "Status" from one of the allowed numbers to that WhatsApp
    account.
 
@@ -33,7 +26,6 @@ restart the add-on — it will print a fresh QR code on the next start.
 | Option | Meaning | Default |
 |---|---|---|
 | `allowed_numbers` | Comma-separated numbers allowed to trigger a reply | `""` (none — must be set) |
-| `link_phone_number` | WhatsApp number to link the bridge as, via a typed-in pairing code instead of a QR scan | `""` (blank falls back to QR) |
 | `battery_low_pct` | Battery % below which the icon turns red | `20` |
 | `pm25_threshold` | PM2.5 µg/m³ at/above which the icon turns red | `22` |
 | `co2_threshold` | CO2 ppm at/above which the icon turns red | `800` |

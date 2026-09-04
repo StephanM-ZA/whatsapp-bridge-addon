@@ -8,7 +8,6 @@ const ALLOWED_NUMBERS = (process.env.ALLOWED_NUMBERS || '')
   .map((s) => s.trim())
   .filter(Boolean);
 const AUTH_DIR = process.env.AUTH_DIR || '/data/baileys_auth';
-const LINK_PHONE_NUMBER = (process.env.LINK_PHONE_NUMBER || '').trim() || null;
 
 const thresholds = {
   batteryLowPct: Number(process.env.BATTERY_LOW_PCT || 20),
@@ -31,7 +30,7 @@ if (ALLOWED_NUMBERS.length === 0) {
 
 const haClient = createHaClient(SUPERVISOR_TOKEN);
 
-startBridge({ authDir: AUTH_DIR, allowedNumbers: ALLOWED_NUMBERS, haClient, thresholds, linkPhoneNumber: LINK_PHONE_NUMBER }).catch((err) => {
+startBridge({ authDir: AUTH_DIR, allowedNumbers: ALLOWED_NUMBERS, haClient, thresholds }).catch((err) => {
   console.error('Fatal error starting WhatsApp bridge:', err);
   process.exit(1);
 });

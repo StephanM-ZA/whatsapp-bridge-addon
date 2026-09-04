@@ -37,7 +37,7 @@ function shouldHandleMessage(msg, { ownIdentifiers, allowedNumbers }) {
   return senderIds.some((id) => allowedNumbers.includes(id));
 }
 
-async function startBridge({ authDir, allowedNumbers, haClient, thresholds, linkPhoneNumber = null }) {
+async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
   const sock = makeWASocket({
@@ -47,22 +47,8 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds, link
 
   sock.ev.on('creds.update', saveCreds);
 
-  // Pairing-by-code is the default when configured: WhatsApp's QR payload needs a
-  // large enough grid that it doesn't fit in most add-on log viewers. A pairing
-  // code is a short string typed into WhatsApp (Settings > Linked Devices > Link
-  // with phone number instead) — no image to render or fit anywhere. Falls back
-  // to printing the QR (below) only when no phone number is configured.
-  if (linkPhoneNumber && !state.creds.registered) {
-    sock.requestPairingCode(linkPhoneNumber).then((code) => {
-      console.log(`WhatsApp pairing code for ${linkPhoneNumber}: ${code}`);
-      console.log('Enter this in WhatsApp: Settings > Linked Devices > Link a Device > Link with phone number instead.');
-    }).catch((err) => {
-      console.error('Failed to request WhatsApp pairing code:', err);
-    });
-  }
-
   sock.ev.on('connection.update', (update) => {
-    if (update.qr && !linkPhoneNumber) {
+    if (update.qr) {
       console.log('Scan this QR code with WhatsApp (Linked Devices > Link a Device):');
       qrcode.generate(update.qr, { small: true });
     }
@@ -73,7 +59,7 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds, link
       sock.ev.removeAllListeners();
       if (shouldReconnect) {
         setTimeout(() => {
-          startBridge({ authDir, allowedNumbers, haClient, thresholds, linkPhoneNumber }).catch((err) => {
+          startBridge({ authDir, allowedNumbers, haClient, thresholds }).catch((err) => {
             console.error('Reconnect attempt failed:', err);
           });
         }, 5000);
