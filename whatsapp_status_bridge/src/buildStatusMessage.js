@@ -1,6 +1,6 @@
 // src/buildStatusMessage.js
 const { gateIcon, batteryIcon, airQualityIcon, purifierIcon } = require('./icons');
-const { showerCall, powerCheck, sunopsis } = require('./quips');
+const { showerCall, powerCheck, sunopsis, airQuip } = require('./quips');
 
 const ENTITIES = {
   gate: 'binary_sensor.gate_open_confirmed',
@@ -164,6 +164,12 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
     lines.push(`🌬️ CO2: *${val} ppm* ${airQualityIcon(val, thresholds.co2Threshold)}`);
   } else {
     lines.push(`🌬️ CO2: ${NA}`);
+  }
+  if (states.pm25 && states.co2) {
+    const pm25Val = parseFloat(states.pm25.state);
+    const co2Val = parseFloat(states.co2.state);
+    lines.push('');
+    lines.push(`_🫁 Air Check: ${airQuip(pm25Val, co2Val, thresholds.pm25Threshold, thresholds.co2Threshold)}_`);
   }
   lines.push('──────────');
   lines.push('');

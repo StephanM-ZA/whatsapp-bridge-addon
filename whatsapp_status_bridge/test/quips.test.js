@@ -1,7 +1,7 @@
 // test/quips.test.js
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { showerCall, powerCheck, sunopsis } = require('../src/quips');
+const { showerCall, powerCheck, sunopsis, airQuip } = require('../src/quips');
 
 test('showerCall: only Main ready', () => {
   assert.equal(showerCall(45, 30), "Main Geyser — the other one's still sulking in the cold 🥶");
@@ -64,4 +64,24 @@ test('sunopsis: known condition', () => {
 
 test('sunopsis: unknown condition falls back gracefully', () => {
   assert.equal(sunopsis('some-new-condition'), "Weather's doing... something. Go look outside. 🤷");
+});
+
+test('airQuip: both good', () => {
+  assert.equal(airQuip(12, 650, 22, 800), 'Crisp as a mountain breeze in here — nothing to see, folks 🌬️✨');
+});
+
+test('airQuip: PM2.5 bad only', () => {
+  assert.equal(airQuip(30, 650, 22, 800), 'Particulates are throwing a party in here uninvited 🎉😤');
+});
+
+test('airQuip: CO2 bad only', () => {
+  assert.equal(airQuip(12, 900, 22, 800), 'Getting a bit stuffy — crack a window before everyone starts yawning in sync 🥱');
+});
+
+test('airQuip: both bad', () => {
+  assert.equal(airQuip(30, 900, 22, 800), 'Dust AND stuffiness — the full combo. Open a window, close the debate 🪟🔥');
+});
+
+test('airQuip: respects custom thresholds', () => {
+  assert.equal(airQuip(15, 500, 10, 400), 'Dust AND stuffiness — the full combo. Open a window, close the debate 🪟🔥');
 });

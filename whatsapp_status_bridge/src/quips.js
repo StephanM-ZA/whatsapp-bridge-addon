@@ -57,4 +57,20 @@ function sunopsis(condition) {
   return SUNOPSIS_BY_CONDITION[condition] || "Weather's doing... something. Go look outside. 🤷";
 }
 
-module.exports = { showerCall, powerCheck, sunopsis };
+function airQuip(pm25, co2, pm25Threshold, co2Threshold) {
+  const pm25Bad = pm25 >= pm25Threshold;
+  const co2Bad = co2 >= co2Threshold;
+
+  if (pm25Bad && co2Bad) {
+    return "Dust AND stuffiness — the full combo. Open a window, close the debate 🪟🔥";
+  }
+  if (pm25Bad) {
+    return "Particulates are throwing a party in here uninvited 🎉😤";
+  }
+  if (co2Bad) {
+    return "Getting a bit stuffy — crack a window before everyone starts yawning in sync 🥱";
+  }
+  return "Crisp as a mountain breeze in here — nothing to see, folks 🌬️✨";
+}
+
+module.exports = { showerCall, powerCheck, sunopsis, airQuip };

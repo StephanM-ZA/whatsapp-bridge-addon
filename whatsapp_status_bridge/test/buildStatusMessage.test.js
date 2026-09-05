@@ -52,6 +52,7 @@ test('happy path renders every section with the right icons and quips', async ()
   assert.match(message, /Main Geyser — the other one's still sulking in the cold 🥶/);
   assert.match(message, /PM2\.5: \*12 µg\/m³\* 🟢/);
   assert.match(message, /CO2: \*650 ppm\* 🟢/);
+  assert.match(message, /Air Check: Crisp as a mountain breeze in here — nothing to see, folks 🌬️✨/);
   assert.match(message, /Air Purifier 1: \*Auto\* 🟢/);
   assert.match(message, /Air Purifier 2: \*Auto\* 🟢/);
   assert.match(message, /Sunny and smug about it/);
@@ -72,6 +73,7 @@ test('an unavailable single entity renders N/A on its own line without failing t
 
   assert.match(message, /PM2\.5: ⚪ N\/A/);
   assert.match(message, /Gate: \*Closed\* 🟢/);
+  assert.doesNotMatch(message, /Air Check/);
 });
 
 test('HA entirely unreachable returns a short explicit failure message, not a partial reply', async () => {
