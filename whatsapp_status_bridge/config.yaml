@@ -1,5 +1,5 @@
 name: WhatsApp Status Bridge
-version: "0.2.2"
+version: "0.2.3"
 slug: whatsapp_status_bridge
 description: Reply to a WhatsApp "Status" message with a home status summary
 arch:
