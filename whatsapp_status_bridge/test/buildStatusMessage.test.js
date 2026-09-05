@@ -43,17 +43,17 @@ test('happy path renders every section with the right icons and quips', async ()
   const haClient = fakeHaClient(HAPPY_PATH_STATES);
   const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
 
-  assert.match(message, /Marais' Home Status/);
+  assert.match(message, /🏠 \*Home Status\*/);
   assert.match(message, /Gate: \*Closed\* 🟢/);
   assert.match(message, /Battery: \*82%\* 🟢/);
   assert.match(message, /On Eskom — treating ourselves to some grid power today/);
   assert.match(message, /Main Geyser: \*45°C\* 🟢/);
-  assert.match(message, /Boys Geyser: \*30°C\* 🔴/);
-  assert.match(message, /Main Geyser — Boys is still sulking in the cold 🥶/);
+  assert.match(message, /Second Geyser: \*30°C\* 🔴/);
+  assert.match(message, /Main Geyser — the other one's still sulking in the cold 🥶/);
   assert.match(message, /PM2\.5: \*12 µg\/m³\* 🟢/);
   assert.match(message, /CO2: \*650 ppm\* 🟢/);
-  assert.match(message, /Blake Air Purifier: \*Auto\* 🟢/);
-  assert.match(message, /Hayden Air Purifier: \*Auto\* 🟢/);
+  assert.match(message, /Air Purifier 1: \*Auto\* 🟢/);
+  assert.match(message, /Air Purifier 2: \*Auto\* 🟢/);
   assert.match(message, /Sunny and smug about it/);
 });
 
@@ -141,7 +141,7 @@ test('one geyser unavailable renders that geyser as N/A, keeps the other reading
   const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
 
   assert.match(message, /♨️ Main Geyser: ⚪ N\/A/);
-  assert.match(message, /♨️ Boys Geyser: \*30°C\* 🔴/);
+  assert.match(message, /♨️ Second Geyser: \*30°C\* 🔴/);
   assert.doesNotMatch(message, /Shower Call/);
 });
 
@@ -167,5 +167,5 @@ test('a powered-off purifier with a stale Favorite preset_mode shows Off, not re
 
   const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
 
-  assert.match(message, /Blake Air Purifier: \*Off\* ⚪/);
+  assert.match(message, /Air Purifier 1: \*Off\* ⚪/);
 });

@@ -3,18 +3,18 @@ const DEFAULT_SHOWER_TEMP_C = 35;
 const DEFAULT_IMPORT_THRESHOLD_W = 100;
 const DEFAULT_HIGH_FORECAST_KWH = 10;
 
-function showerCall(mainTemp, boysTemp, threshold = DEFAULT_SHOWER_TEMP_C) {
+function showerCall(mainTemp, secondTemp, threshold = DEFAULT_SHOWER_TEMP_C) {
   const mainReady = mainTemp >= threshold;
-  const boysReady = boysTemp >= threshold;
+  const secondReady = secondTemp >= threshold;
 
-  if (mainReady && boysReady) {
+  if (mainReady && secondReady) {
     return "Either one, champ — both are fired up 🔥🔥 flip a coin 🪙";
   }
   if (mainReady) {
-    return "Main Geyser — Boys is still sulking in the cold 🥶";
+    return "Main Geyser — the other one's still sulking in the cold 🥶";
   }
-  if (boysReady) {
-    return "Boys Geyser — Main's still finding itself 🐢";
+  if (secondReady) {
+    return "Second Geyser — Main's still finding itself 🐢";
   }
   return "Nobody's ready. Cold shower o'clock 🥶🚿";
 }

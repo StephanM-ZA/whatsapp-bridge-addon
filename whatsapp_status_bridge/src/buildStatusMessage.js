@@ -9,11 +9,11 @@ const ENTITIES = {
   gridPower: 'sensor.solarman_total_grid_power_2',
   solarForecastRemaining: 'sensor.solcast_pv_forecast_forecast_remaining_today',
   mainGeyser: 'sensor.solarbot_110493863532580_geyser_1_internal_temp',
-  boysGeyser: 'sensor.solarbot_110493863532580_geyser_2_internal_temp',
+  secondGeyser: 'sensor.solarbot_110493863532580_geyser_2_internal_temp',
   pm25: 'sensor.nobito_pm2_5',
   co2: 'sensor.nobito_carbon_dioxide',
-  purifierBlake: 'fan.xiaomi_cpa4_6940_air_purifier',
-  purifierHayden: 'fan.xiaomi_cpa4_b5e2_air_purifier',
+  purifier1: 'fan.xiaomi_cpa4_6940_air_purifier',
+  purifier2: 'fan.xiaomi_cpa4_b5e2_air_purifier',
   weather: 'weather.forecast_home',
 };
 
@@ -85,7 +85,7 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   const states = Object.fromEntries(keys.map((key, i) => [key, fetched[i]]));
 
   const lines = [];
-  lines.push("👨‍👩‍👧‍👦 *Marais' Home Status*");
+  lines.push("🏠 *Home Status*");
   lines.push(`📅 ${formatTimestamp(now)}`);
   lines.push('▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬');
   lines.push('');
@@ -135,21 +135,24 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   } else {
     lines.push(`♨️ Main Geyser: ${NA}`);
   }
-  if (states.boysGeyser) {
-    const boysTemp = parseFloat(states.boysGeyser.state);
-    lines.push(`♨️ Boys Geyser: *${boysTemp}°C* ${boysTemp >= thresholds.showerTempC ? '🟢' : '🔴'}`);
+  if (states.secondGeyser) {
+    const secondTemp = parseFloat(states.secondGeyser.state);
+    lines.push(`♨️ Second Geyser: *${secondTemp}°C* ${secondTemp >= thresholds.showerTempC ? '🟢' : '🔴'}`);
   } else {
-    lines.push(`♨️ Boys Geyser: ${NA}`);
+    lines.push(`♨️ Second Geyser: ${NA}`);
   }
-  if (states.mainGeyser && states.boysGeyser) {
+  if (states.mainGeyser && states.secondGeyser) {
     const mainTemp = parseFloat(states.mainGeyser.state);
-    const boysTemp = parseFloat(states.boysGeyser.state);
+    const secondTemp = parseFloat(states.secondGeyser.state);
     lines.push('');
-    lines.push(`_🚿 Shower Call: ${showerCall(mainTemp, boysTemp, thresholds.showerTempC)}_`);
+    lines.push(`_🚿 Shower Call: ${showerCall(mainTemp, secondTemp, thresholds.showerTempC)}_`);
   }
   lines.push('──────────');
   lines.push('');
 
+  // PM2.5/CO2 both read from the same Nobito sensor and both turn red at/above
+  // their threshold — higher is worse for air quality, the opposite direction
+  // from batteryIcon, where red means below its threshold.
   if (states.pm25) {
     const val = parseFloat(states.pm25.state);
     lines.push(`😷 PM2.5: *${val} µg/m³* ${airQualityIcon(val, thresholds.pm25Threshold)}`);
@@ -165,17 +168,17 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   lines.push('──────────');
   lines.push('');
 
-  if (states.purifierBlake) {
-    const { icon, label } = purifierIcon(states.purifierBlake.state, states.purifierBlake.attributes.preset_mode);
-    lines.push(`💨 Blake Air Purifier: *${label}* ${icon}`);
+  if (states.purifier1) {
+    const { icon, label } = purifierIcon(states.purifier1.state, states.purifier1.attributes.preset_mode);
+    lines.push(`💨 Air Purifier 1: *${label}* ${icon}`);
   } else {
-    lines.push(`💨 Blake Air Purifier: ${NA}`);
+    lines.push(`💨 Air Purifier 1: ${NA}`);
   }
-  if (states.purifierHayden) {
-    const { icon, label } = purifierIcon(states.purifierHayden.state, states.purifierHayden.attributes.preset_mode);
-    lines.push(`💨 Hayden Air Purifier: *${label}* ${icon}`);
+  if (states.purifier2) {
+    const { icon, label } = purifierIcon(states.purifier2.state, states.purifier2.attributes.preset_mode);
+    lines.push(`💨 Air Purifier 2: *${label}* ${icon}`);
   } else {
-    lines.push(`💨 Hayden Air Purifier: ${NA}`);
+    lines.push(`💨 Air Purifier 2: ${NA}`);
   }
 
   return lines.join('\n');

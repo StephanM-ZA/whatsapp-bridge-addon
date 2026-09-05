@@ -4,11 +4,11 @@ const assert = require('node:assert/strict');
 const { showerCall, powerCheck, sunopsis } = require('../src/quips');
 
 test('showerCall: only Main ready', () => {
-  assert.equal(showerCall(45, 30), "Main Geyser — Boys is still sulking in the cold 🥶");
+  assert.equal(showerCall(45, 30), "Main Geyser — the other one's still sulking in the cold 🥶");
 });
 
-test('showerCall: only Boys ready', () => {
-  assert.equal(showerCall(30, 45), "Boys Geyser — Main's still finding itself 🐢");
+test('showerCall: only Second ready', () => {
+  assert.equal(showerCall(30, 45), "Second Geyser — Main's still finding itself 🐢");
 });
 
 test('showerCall: both ready', () => {
@@ -20,7 +20,7 @@ test('showerCall: neither ready', () => {
 });
 
 test('showerCall: respects a custom threshold', () => {
-  assert.equal(showerCall(40, 20, 38), "Main Geyser — Boys is still sulking in the cold 🥶");
+  assert.equal(showerCall(40, 20, 38), "Main Geyser — the other one's still sulking in the cold 🥶");
 });
 
 test('powerCheck: grid disconnected is battery only regardless of other values', () => {
