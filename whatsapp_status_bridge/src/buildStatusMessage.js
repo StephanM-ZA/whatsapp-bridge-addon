@@ -74,6 +74,31 @@ async function safeGetState(haClient, entityId) {
   }
 }
 
+// weather.get_forecasts is a service call, not a state attribute (HA moved
+// forecasts off the entity itself), so it needs its own safe wrapper — and a
+// feature-detect on callService, since older/simpler HA client doubles in
+// tests only implement getState/ping.
+async function safeGetForecast(haClient, entityId) {
+  try {
+    if (typeof haClient.callService !== 'function') {
+      return null;
+    }
+    const result = await haClient.callService(
+      'weather',
+      'get_forecasts',
+      { entity_id: entityId, type: 'daily' },
+      { returnResponse: true }
+    );
+    const today = result?.service_response?.[entityId]?.forecast?.[0];
+    if (!today || typeof today.temperature !== 'number' || typeof today.templow !== 'number') {
+      return null;
+    }
+    return today;
+  } catch {
+    return null;
+  }
+}
+
 async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   const reachable = await haClient.ping();
   if (!reachable) {
@@ -83,6 +108,7 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   const keys = Object.keys(ENTITIES);
   const fetched = await Promise.all(keys.map((key) => safeGetState(haClient, ENTITIES[key])));
   const states = Object.fromEntries(keys.map((key, i) => [key, fetched[i]]));
+  const todayForecast = await safeGetForecast(haClient, ENTITIES.weather);
 
   const lines = [];
   lines.push("🏠 *Home Status*");
@@ -94,6 +120,9 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
     const temp = states.weather.attributes.temperature;
     const condition = states.weather.state;
     lines.push(`☀️ Weather: *${temp}°C, ${conditionLabel(condition)}*`);
+    if (todayForecast) {
+      lines.push(`🌡️ Low/High: *${todayForecast.templow}°C / ${todayForecast.temperature}°C*`);
+    }
     lines.push('');
     lines.push(`_😎 Sunopsis: ${sunopsis(condition)}_`);
   } else {

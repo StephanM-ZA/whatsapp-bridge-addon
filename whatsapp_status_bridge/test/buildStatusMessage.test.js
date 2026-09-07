@@ -14,12 +14,21 @@ const THRESHOLDS = {
 
 const FIXED_NOW = new Date('2026-09-04T14:32:00');
 
-function fakeHaClient(states) {
+const DEFAULT_FORECAST_TODAY = { temperature: 24, templow: 15 };
+
+function fakeHaClient(states, { forecastToday = DEFAULT_FORECAST_TODAY } = {}) {
   return {
     ping: async () => true,
     getState: async (entityId) => {
       if (!(entityId in states)) throw new Error(`unexpected entity ${entityId}`);
       return states[entityId];
+    },
+    callService: async (domain, service, serviceData) => {
+      if (domain === 'weather' && service === 'get_forecasts') {
+        if (!forecastToday) throw new Error('forecast unavailable');
+        return { service_response: { [serviceData.entity_id]: { forecast: [forecastToday] } } };
+      }
+      throw new Error(`unexpected service call ${domain}.${service}`);
     },
   };
 }
@@ -44,6 +53,7 @@ test('happy path renders every section with the right icons and quips', async ()
   const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
 
   assert.match(message, /🏠 \*Home Status\*/);
+  assert.match(message, /Low\/High: \*15°C \/ 24°C\*/);
   assert.match(message, /Gate: \*Closed\* 🟢/);
   assert.match(message, /Battery: \*82%\* 🟢/);
   assert.match(message, /On Eskom — treating ourselves to some grid power today/);
@@ -56,6 +66,27 @@ test('happy path renders every section with the right icons and quips', async ()
   assert.match(message, /Air Purifier 1: \*Auto\* 🟢/);
   assert.match(message, /Air Purifier 2: \*Auto\* 🟢/);
   assert.match(message, /Sunny and smug about it/);
+});
+
+test('a failing forecast call still renders current weather, just without the Low/High line', async () => {
+  const haClient = fakeHaClient(HAPPY_PATH_STATES, { forecastToday: null });
+
+  const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
+
+  assert.match(message, /Weather: \*24°C, Sunny\*/);
+  assert.doesNotMatch(message, /Low\/High/);
+});
+
+test('a haClient without callService (older test double) still renders weather, just without Low/High', async () => {
+  const haClient = {
+    ping: async () => true,
+    getState: async (entityId) => HAPPY_PATH_STATES[entityId],
+  };
+
+  const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
+
+  assert.match(message, /Weather: \*24°C, Sunny\*/);
+  assert.doesNotMatch(message, /Low\/High/);
 });
 
 test('an unavailable single entity renders N/A on its own line without failing the rest', async () => {
