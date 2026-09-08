@@ -3,6 +3,7 @@ const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = requi
 const pino = require('pino');
 const qrcode = require('qrcode-terminal');
 const { buildStatusMessage } = require('./buildStatusMessage');
+const { load } = require('./copyStore');
 
 function extractText(message) {
   return (message.conversation || message.extendedTextMessage?.text || '').trim();
@@ -68,7 +69,7 @@ async function sendWithRetry(sock, jid, text, { attempts = 2, delayMs = 1500 } =
   throw lastErr;
 }
 
-async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
+async function startBridge({ authDir, allowedNumbers, haClient, thresholds, dataDir }) {
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
   const sock = makeWASocket({
@@ -114,7 +115,10 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
       if (text.toLowerCase() !== 'status') continue;
 
       try {
-        const reply = await buildStatusMessage(haClient, thresholds);
+        // Loaded per reply, not once at boot, so an edit takes effect on the
+        // next "status" instead of needing the add-on restarted.
+        const copy = dataDir ? load(dataDir).doc : undefined;
+        const reply = await buildStatusMessage(haClient, thresholds, new Date(), copy);
         await sendWithRetry(sock, jid, reply);
       } catch (err) {
         console.error('Failed to build/send status reply:', err);

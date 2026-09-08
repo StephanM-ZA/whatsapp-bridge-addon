@@ -1,76 +1,54 @@
 // src/quips.js
+//
+// Which line is chosen lives here; what each line SAYS comes from the copy
+// document, so the wording is editable without touching this logic. Each
+// function takes an optional group of strings and falls back to the built-in
+// set, which keeps every existing caller - and every existing test - working
+// unchanged.
+const { defaults } = require('./copyDefaults');
+
+const Q = defaults().quips;   // resolved once, not per call
+
 const DEFAULT_SHOWER_TEMP_C = 35;
 const DEFAULT_IMPORT_THRESHOLD_W = 100;
 const DEFAULT_HIGH_FORECAST_KWH = 10;
 
-function showerCall(mainTemp, secondTemp, threshold = DEFAULT_SHOWER_TEMP_C) {
+function showerCall(mainTemp, secondTemp, threshold = DEFAULT_SHOWER_TEMP_C, copy) {
+  const q = copy || Q.showerCall;
   const mainReady = mainTemp >= threshold;
   const secondReady = secondTemp >= threshold;
 
-  if (mainReady && secondReady) {
-    return "Either one, champ — both are fired up 🔥🔥 flip a coin 🪙";
-  }
-  if (mainReady) {
-    return "Main Geyser — the other one's still sulking in the cold 🥶";
-  }
-  if (secondReady) {
-    return "Second Geyser — Main's still finding itself 🐢";
-  }
-  return "Nobody's ready. Cold shower o'clock 🥶🚿";
+  if (mainReady && secondReady) return q.bothReady;
+  if (mainReady) return q.mainOnly;
+  if (secondReady) return q.secondOnly;
+  return q.neither;
 }
 
 function powerCheck(gridConnected, gridPowerW, solarForecastRemainingKwh, opts = {}) {
+  const q = opts.copy || Q.powerCheck;
   const importThresholdW = opts.importThresholdW ?? DEFAULT_IMPORT_THRESHOLD_W;
   const highForecastKwh = opts.highForecastKwh ?? DEFAULT_HIGH_FORECAST_KWH;
 
-  if (!gridConnected) {
-    return "Battery Only — Eskom's on a coffee break ☕, we're flying solo";
-  }
-  if (gridPowerW >= importThresholdW) {
-    return "On Eskom — treating ourselves to some grid power today";
-  }
-  if (solarForecastRemainingKwh >= highForecastKwh) {
-    return "Tons of solar left today — fire up whatever you want, guilt-free";
-  }
-  return "Solar's holding its own — steady as she goes";
+  if (!gridConnected) return q.offGrid;
+  if (gridPowerW >= importThresholdW) return q.importing;
+  if (solarForecastRemainingKwh >= highForecastKwh) return q.highSolar;
+  return q.steady;
 }
 
-const SUNOPSIS_BY_CONDITION = {
-  sunny: 'Sunny and smug about it. SPF up, excuses down. ☀️😎',
-  'clear-night': "Clear skies — perfect for pretending you'll stargaze. 🌌",
-  partlycloudy: "Partly cloudy, because the sky can't commit either. ⛅",
-  cloudy: 'Overcast and moody, much like Mondays. ☁️',
-  fog: 'Foggy — nature hiding your unswept driveway. 🌫️',
-  rainy: "Rainy — the sky's having a good cry. 🌧️",
-  pouring: "Pouring — Noah's calling, wants his ark back. 🌊",
-  lightning: "The sky's throwing a full tantrum. ⚡",
-  'lightning-rainy': "The sky's throwing a full tantrum. ⚡",
-  snowy: 'Snow?! In South Africa?? Go check your sensors. 🥶',
-  'snowy-rainy': 'Snow?! In South Africa?? Go check your sensors. 🥶',
-  hail: "The sky's lobbing ice cubes at your car. 🧊",
-  windy: 'Hold onto your hats and the gate. 💨',
-  'windy-variant': 'Hold onto your hats and the gate. 💨',
-  exceptional: "Something weird's up out there — check the news. 📰",
-};
-
-function sunopsis(condition) {
-  return SUNOPSIS_BY_CONDITION[condition] || "Weather's doing... something. Go look outside. 🤷";
+function sunopsis(condition, copy) {
+  const q = copy || Q.sunopsis;
+  return q[condition] || q.fallback;
 }
 
-function airQuip(pm25, co2, pm25Threshold, co2Threshold) {
+function airQuip(pm25, co2, pm25Threshold, co2Threshold, copy) {
+  const q = copy || Q.airCheck;
   const pm25Bad = pm25 >= pm25Threshold;
   const co2Bad = co2 >= co2Threshold;
 
-  if (pm25Bad && co2Bad) {
-    return "Dust AND stuffiness — the full combo. Open a window, close the debate 🪟🔥";
-  }
-  if (pm25Bad) {
-    return "Particulates are throwing a party in here uninvited 🎉😤";
-  }
-  if (co2Bad) {
-    return "Getting a bit stuffy — crack a window before everyone starts yawning in sync 🥱";
-  }
-  return "Crisp as a mountain breeze in here — nothing to see, folks 🌬️✨";
+  if (pm25Bad && co2Bad) return q.both;
+  if (pm25Bad) return q.pm25;
+  if (co2Bad) return q.co2;
+  return q.clean;
 }
 
 module.exports = { showerCall, powerCheck, sunopsis, airQuip };

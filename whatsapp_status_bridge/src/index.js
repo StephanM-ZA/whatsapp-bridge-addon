@@ -5,6 +5,9 @@ require('./redactLogs').install();
 
 const { createHaClient } = require('./haClient');
 const { startBridge } = require('./whatsapp');
+const { startServer } = require('./server');
+const { load } = require('./copyStore');
+const { buildStatusMessage } = require('./buildStatusMessage');
 
 const SUPERVISOR_TOKEN = process.env.SUPERVISOR_TOKEN;
 const ALLOWED_NUMBERS = (process.env.ALLOWED_NUMBERS || '')
@@ -34,7 +37,17 @@ if (ALLOWED_NUMBERS.length === 0) {
 
 const haClient = createHaClient(SUPERVISOR_TOKEN);
 
-startBridge({ authDir: AUTH_DIR, allowedNumbers: ALLOWED_NUMBERS, haClient, thresholds }).catch((err) => {
+// The editor renders its preview through the SAME builder the bridge uses,
+// against live Home Assistant state. A preview that went through a second
+// code path would eventually disagree with the message, which is the one
+// thing a preview must never do.
+startServer({
+  dataDir: AUTH_DIR.replace(/\/baileys_auth$/, ''),
+  port: Number(process.env.INGRESS_PORT || 8099),
+  renderPreview: (doc) => buildStatusMessage(haClient, thresholds, new Date(), doc),
+});
+
+startBridge({ authDir: AUTH_DIR, allowedNumbers: ALLOWED_NUMBERS, haClient, thresholds, dataDir: AUTH_DIR.replace(/\/baileys_auth$/, '') }).catch((err) => {
   console.error('Fatal error starting WhatsApp bridge:', err);
   process.exit(1);
 });

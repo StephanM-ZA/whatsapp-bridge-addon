@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { buildStatusMessage } = require('../src/buildStatusMessage');
+const { defaults } = require('../src/copyDefaults');
 
 const THRESHOLDS = {
   batteryLowPct: 20,
@@ -201,4 +202,83 @@ test('a powered-off purifier with a stale Favorite preset_mode shows Off, not re
   const message = await buildStatusMessage(haClient, THRESHOLDS, FIXED_NOW);
 
   assert.match(message, /Air Purifier 1: \*Off\* ⚪/);
+});
+
+
+// ---- the editable copy document actually drives the message ---------------
+//
+// The tests above prove the DEFAULTS still render exactly what they always
+// did. These prove the document is really in charge - without them the whole
+// refactor could be inert and every test would still pass.
+
+test('renaming a label changes the message', async () => {
+  const copy = defaults();
+  copy.sections.find((s) => s.id === 'gate').labels.gate = '🛡️ Front Gate';
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(msg.includes('🛡️ Front Gate:'));
+  assert.ok(!msg.includes('🚪 Gate:'));
+});
+
+test('disabling a section removes it, and leaves no orphan divider', async () => {
+  const copy = defaults();
+  copy.sections.find((s) => s.id === 'gate').enabled = false;
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(!msg.includes('Gate:'));
+  assert.ok(!msg.trimEnd().endsWith(copy.strings.divider));
+  // one fewer section means one fewer divider
+  const dividers = msg.split('\n').filter((l) => l === copy.strings.divider).length;
+  assert.equal(dividers, copy.sections.filter((s) => s.enabled !== false).length - 1);
+});
+
+test('reordering sections reorders the message', async () => {
+  const copy = defaults();
+  const ids = ['purifiers', 'weather', 'gate', 'battery', 'geysers', 'air'];
+  copy.sections = ids.map((id) => defaults().sections.find((s) => s.id === id));
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  const body = msg.split('\n').slice(4).join('\n');   // past the header
+  assert.ok(body.indexOf('Air Purifier 1') < body.indexOf('Weather:'));
+});
+
+test('a rewritten quip is the one that appears', async () => {
+  // The fixture is 45C and 30C against a 35C threshold, so this is the
+  // mainOnly branch - overriding bothReady would pass whatever the code did.
+  const copy = defaults();
+  copy.quips.showerCall.mainOnly = 'Main only. Second is sulking.';
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(msg.includes('Main only. Second is sulking.'));
+  assert.ok(!msg.includes("still sulking in the cold"));
+});
+
+test('the OTHER quip branches are reachable too', async () => {
+  const copy = defaults();
+  copy.quips.showerCall.bothReady = 'Both hot.';
+  const hot = { ...HAPPY_PATH_STATES,
+    'sensor.solarbot_110493863532580_geyser_2_internal_temp': { state: '50', attributes: {} } };
+  const msg = await buildStatusMessage(fakeHaClient(hot), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(msg.includes('Both hot.'));
+});
+
+test('the header and divider are editable', async () => {
+  const copy = defaults();
+  copy.strings.title = '🏡 *Casa*';
+  copy.strings.divider = '~~~~~';
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(msg.startsWith('🏡 *Casa*'));
+  assert.ok(msg.includes('~~~~~'));
+  assert.ok(!msg.includes('──────────'));
+});
+
+test('the unreachable message is editable too', async () => {
+  const copy = defaults();
+  copy.strings.unreachable = 'HA is asleep.';
+  const down = { ping: async () => false };
+  assert.equal(await buildStatusMessage(down, THRESHOLDS, FIXED_NOW, copy), 'HA is asleep.');
+});
+
+test('a single enabled section produces no dividers at all', async () => {
+  const copy = defaults();
+  copy.sections.forEach((s) => { s.enabled = s.id === 'gate'; });
+  const msg = await buildStatusMessage(fakeHaClient(HAPPY_PATH_STATES), THRESHOLDS, FIXED_NOW, copy);
+  assert.ok(!msg.includes(copy.strings.divider));
+  assert.ok(msg.includes('Gate:'));
 });

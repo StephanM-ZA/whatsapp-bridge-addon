@@ -1,6 +1,7 @@
 // src/buildStatusMessage.js
 const { gateIcon, batteryIcon, airQualityIcon, purifierIcon } = require('./icons');
 const { showerCall, powerCheck, sunopsis, airQuip } = require('./quips');
+const { defaults } = require('./copyDefaults');
 
 const ENTITIES = {
   gate: 'binary_sensor.gate_open_confirmed',
@@ -38,9 +39,10 @@ const CONDITION_LABELS = {
   exceptional: 'Exceptional',
 };
 
-function conditionLabel(condition) {
-  if (CONDITION_LABELS[condition]) {
-    return CONDITION_LABELS[condition];
+function conditionLabel(condition, table) {
+  const labels = table || CONDITION_LABELS;
+  if (labels[condition]) {
+    return labels[condition];
   }
   return condition
     .split('-')
@@ -99,10 +101,10 @@ async function safeGetForecast(haClient, entityId) {
   }
 }
 
-async function buildStatusMessage(haClient, thresholds, now = new Date()) {
+async function buildStatusMessage(haClient, thresholds, now = new Date(), copy = defaults()) {
   const reachable = await haClient.ping();
   if (!reachable) {
-    return UNREACHABLE_MESSAGE;
+    return copy.strings.unreachable;
   }
 
   const keys = Object.keys(ENTITIES);
@@ -110,111 +112,116 @@ async function buildStatusMessage(haClient, thresholds, now = new Date()) {
   const states = Object.fromEntries(keys.map((key, i) => [key, fetched[i]]));
   const todayForecast = await safeGetForecast(haClient, ENTITIES.weather);
 
+  // One renderer per section. Each returns its own lines and knows nothing
+  // about dividers or order - those belong to the document, not to the
+  // section, which is what makes reordering and disabling safe.
+  const S = {};
+  copy.sections.forEach((sec) => { S[sec.id] = sec; });
+  const NA_TEXT = copy.strings.na;
+
+  const RENDER = {
+    weather(L) {
+      const out = [];
+      if (!states.weather) return [`${L.weather}: ${NA_TEXT}`];
+      const temp = states.weather.attributes.temperature;
+      const condition = states.weather.state;
+      out.push(`${L.weather}: *${temp}°C, ${conditionLabel(condition, copy.conditionLabels)}*`);
+      if (todayForecast) {
+        out.push(`${L.lowHigh}: *${todayForecast.templow}°C / ${todayForecast.temperature}°C*`);
+      }
+      out.push('');
+      out.push(`_${L.sunopsis}: ${sunopsis(condition, copy.quips.sunopsis)}_`);
+      return out;
+    },
+
+    gate(L) {
+      if (!states.gate) return [`${L.gate}: ${NA_TEXT}`];
+      const closed = states.gate.state === 'off';
+      return [`${L.gate}: *${closed ? L.closed : L.open}* ${gateIcon(closed)}`];
+    },
+
+    battery(L) {
+      if (!states.battery) return [`${L.battery}: ${NA_TEXT}`];
+      const pct = parseFloat(states.battery.state);
+      const gridConnected = states.gridConnected ? states.gridConnected.state === 'On-Grid' : true;
+      const gridPowerW = states.gridPower ? parseFloat(states.gridPower.state) : 0;
+      const forecastKwh = states.solarForecastRemaining
+        ? parseFloat(states.solarForecastRemaining.state) : 0;
+      const powerLine = powerCheck(gridConnected, gridPowerW, forecastKwh, {
+        importThresholdW: thresholds.gridImportThresholdW,
+        highForecastKwh: thresholds.solarForecastHighKwh,
+        copy: copy.quips.powerCheck,
+      });
+      return [
+        `${L.battery}: *${pct}%* ${batteryIcon(pct, thresholds.batteryLowPct)}`,
+        '',
+        `_${L.powerCheck}: ${powerLine}_`,
+      ];
+    },
+
+    geysers(L) {
+      const out = [];
+      const main = states.mainGeyser ? parseFloat(states.mainGeyser.state) : null;
+      const second = states.secondGeyser ? parseFloat(states.secondGeyser.state) : null;
+      out.push(main === null ? `${L.main}: ${NA_TEXT}`
+        : `${L.main}: *${main}°C* ${main >= thresholds.showerTempC ? '🟢' : '🔴'}`);
+      out.push(second === null ? `${L.second}: ${NA_TEXT}`
+        : `${L.second}: *${second}°C* ${second >= thresholds.showerTempC ? '🟢' : '🔴'}`);
+      if (main !== null && second !== null) {
+        out.push('');
+        out.push(`_${L.showerCall}: ${showerCall(main, second, thresholds.showerTempC, copy.quips.showerCall)}_`);
+      }
+      return out;
+    },
+
+    // PM2.5/CO2 both read from the same Nobito sensor and both turn red at or
+    // above their threshold - higher is worse for air quality, the opposite
+    // direction from batteryIcon, where red means below its threshold.
+    air(L) {
+      const out = [];
+      const pm = states.pm25 ? parseFloat(states.pm25.state) : null;
+      const co2 = states.co2 ? parseFloat(states.co2.state) : null;
+      out.push(pm === null ? `${L.pm25}: ${NA_TEXT}`
+        : `${L.pm25}: *${pm} µg/m³* ${airQualityIcon(pm, thresholds.pm25Threshold)}`);
+      out.push(co2 === null ? `${L.co2}: ${NA_TEXT}`
+        : `${L.co2}: *${co2} ppm* ${airQualityIcon(co2, thresholds.co2Threshold)}`);
+      if (pm !== null && co2 !== null) {
+        out.push('');
+        out.push(`_${L.airCheck}: ${airQuip(pm, co2, thresholds.pm25Threshold, thresholds.co2Threshold, copy.quips.airCheck)}_`);
+      }
+      return out;
+    },
+
+    purifiers(L) {
+      const out = [];
+      [['purifier1', L.p1], ['purifier2', L.p2]].forEach(([key, label]) => {
+        if (!states[key]) { out.push(`${label}: ${NA_TEXT}`); return; }
+        const { icon, label: mode } = purifierIcon(states[key].state, states[key].attributes.preset_mode);
+        out.push(`${label}: *${mode}* ${icon}`);
+      });
+      return out;
+    },
+  };
+
   const lines = [];
-  lines.push("🏠 *Home Status*");
-  lines.push(`📅 ${formatTimestamp(now)}`);
-  lines.push('▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬');
+  lines.push(copy.strings.title);
+  lines.push(`${copy.strings.timestampPrefix} ${formatTimestamp(now)}`);
+  lines.push(copy.strings.headerRule);
   lines.push('');
 
-  if (states.weather) {
-    const temp = states.weather.attributes.temperature;
-    const condition = states.weather.state;
-    lines.push(`☀️ Weather: *${temp}°C, ${conditionLabel(condition)}*`);
-    if (todayForecast) {
-      lines.push(`🌡️ Low/High: *${todayForecast.templow}°C / ${todayForecast.temperature}°C*`);
+  // Dividers go BETWEEN sections, never after the last one, so switching a
+  // section off closes the gap instead of leaving a rule hanging at the end.
+  const blocks = copy.sections
+    .filter((sec) => sec.enabled !== false && RENDER[sec.id])
+    .map((sec) => RENDER[sec.id](sec.labels || {}));
+
+  blocks.forEach((block, i) => {
+    lines.push(...block);
+    if (i < blocks.length - 1) {
+      lines.push(copy.strings.divider);
+      lines.push('');
     }
-    lines.push('');
-    lines.push(`_😎 Sunopsis: ${sunopsis(condition)}_`);
-  } else {
-    lines.push(`☀️ Weather: ${NA}`);
-  }
-  lines.push('──────────');
-  lines.push('');
-
-  if (states.gate) {
-    const closed = states.gate.state === 'off';
-    lines.push(`🚪 Gate: *${closed ? 'Closed' : 'Open'}* ${gateIcon(closed)}`);
-  } else {
-    lines.push(`🚪 Gate: ${NA}`);
-  }
-  lines.push('──────────');
-  lines.push('');
-
-  if (states.battery) {
-    const pct = parseFloat(states.battery.state);
-    lines.push(`🔋 Battery: *${pct}%* ${batteryIcon(pct, thresholds.batteryLowPct)}`);
-    lines.push('');
-    const gridConnected = states.gridConnected ? states.gridConnected.state === 'On-Grid' : true;
-    const gridPowerW = states.gridPower ? parseFloat(states.gridPower.state) : 0;
-    const forecastKwh = states.solarForecastRemaining ? parseFloat(states.solarForecastRemaining.state) : 0;
-    const powerLine = powerCheck(gridConnected, gridPowerW, forecastKwh, {
-      importThresholdW: thresholds.gridImportThresholdW,
-      highForecastKwh: thresholds.solarForecastHighKwh,
-    });
-    lines.push(`_⚡ Power Check: ${powerLine}_`);
-  } else {
-    lines.push(`🔋 Battery: ${NA}`);
-  }
-  lines.push('──────────');
-  lines.push('');
-
-  if (states.mainGeyser) {
-    const mainTemp = parseFloat(states.mainGeyser.state);
-    lines.push(`♨️ Main Geyser: *${mainTemp}°C* ${mainTemp >= thresholds.showerTempC ? '🟢' : '🔴'}`);
-  } else {
-    lines.push(`♨️ Main Geyser: ${NA}`);
-  }
-  if (states.secondGeyser) {
-    const secondTemp = parseFloat(states.secondGeyser.state);
-    lines.push(`♨️ Second Geyser: *${secondTemp}°C* ${secondTemp >= thresholds.showerTempC ? '🟢' : '🔴'}`);
-  } else {
-    lines.push(`♨️ Second Geyser: ${NA}`);
-  }
-  if (states.mainGeyser && states.secondGeyser) {
-    const mainTemp = parseFloat(states.mainGeyser.state);
-    const secondTemp = parseFloat(states.secondGeyser.state);
-    lines.push('');
-    lines.push(`_🚿 Shower Call: ${showerCall(mainTemp, secondTemp, thresholds.showerTempC)}_`);
-  }
-  lines.push('──────────');
-  lines.push('');
-
-  // PM2.5/CO2 both read from the same Nobito sensor and both turn red at/above
-  // their threshold — higher is worse for air quality, the opposite direction
-  // from batteryIcon, where red means below its threshold.
-  if (states.pm25) {
-    const val = parseFloat(states.pm25.state);
-    lines.push(`😷 PM2.5: *${val} µg/m³* ${airQualityIcon(val, thresholds.pm25Threshold)}`);
-  } else {
-    lines.push(`😷 PM2.5: ${NA}`);
-  }
-  if (states.co2) {
-    const val = parseFloat(states.co2.state);
-    lines.push(`🌬️ CO2: *${val} ppm* ${airQualityIcon(val, thresholds.co2Threshold)}`);
-  } else {
-    lines.push(`🌬️ CO2: ${NA}`);
-  }
-  if (states.pm25 && states.co2) {
-    const pm25Val = parseFloat(states.pm25.state);
-    const co2Val = parseFloat(states.co2.state);
-    lines.push('');
-    lines.push(`_🫁 Air Check: ${airQuip(pm25Val, co2Val, thresholds.pm25Threshold, thresholds.co2Threshold)}_`);
-  }
-  lines.push('──────────');
-  lines.push('');
-
-  if (states.purifier1) {
-    const { icon, label } = purifierIcon(states.purifier1.state, states.purifier1.attributes.preset_mode);
-    lines.push(`💨 Air Purifier 1: *${label}* ${icon}`);
-  } else {
-    lines.push(`💨 Air Purifier 1: ${NA}`);
-  }
-  if (states.purifier2) {
-    const { icon, label } = purifierIcon(states.purifier2.state, states.purifier2.attributes.preset_mode);
-    lines.push(`💨 Air Purifier 2: *${label}* ${icon}`);
-  } else {
-    lines.push(`💨 Air Purifier 2: ${NA}`);
-  }
+  });
 
   return lines.join('\n');
 }

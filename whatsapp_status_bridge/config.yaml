@@ -8,7 +8,16 @@ startup: services
 boot: auto
 init: false
 homeassistant_api: true
+# The copy editor, in the Home Assistant sidebar. Ingress only - the port is
+# never published, so the editor is reachable exactly to someone already
+# logged in to Home Assistant and to nobody else.
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:message-text-outline
+panel_title: Status Copy
 map:
+  # copy.json lives here beside the paired WhatsApp session, so edited wording
+  # survives an add-on update the same way the session does.
   - data:rw
 
 options:
