@@ -37,6 +37,37 @@ function shouldHandleMessage(msg, { ownIdentifiers, allowedNumbers }) {
   return senderIds.some((id) => allowedNumbers.includes(id));
 }
 
+// Send a reply, with one retry.
+//
+// WhatsApp rejected a reply on 2026-09-08 with
+//   smax-invalid (479): stanza rejected by server - likely stale device
+//   session or malformed addressing
+// which happens when the device session the server holds for a recipient has
+// gone stale. Baileys refreshes sessions as it goes, so a second attempt a
+// moment later usually lands.
+//
+// KNOWN LIMIT: that 479 arrived as a Baileys warning, not as a rejected
+// promise, so if the server rejects the stanza AFTER sendMessage resolves this
+// retry never fires. It covers the case where the send itself throws. The
+// logging below is the part that helps either way - before this, a reply that
+// never arrived left nothing in the log but Baileys' own warning, so "did it
+// actually answer?" was not a question the log could settle.
+async function sendWithRetry(sock, jid, text, { attempts = 2, delayMs = 1500 } = {}) {
+  let lastErr;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await sock.sendMessage(jid, { text });
+      console.log('Status reply sent to ' + jid + (attempt > 1 ? ' (attempt ' + attempt + ')' : '') + '.');
+      return true;
+    } catch (err) {
+      lastErr = err;
+      console.error('Status reply attempt ' + attempt + '/' + attempts + ' to ' + jid + ' failed:', err?.message || err);
+      if (attempt < attempts) await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
+
 async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
   const { state, saveCreds } = await useMultiFileAuthState(authDir);
 
@@ -84,7 +115,7 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
 
       try {
         const reply = await buildStatusMessage(haClient, thresholds);
-        await sock.sendMessage(jid, { text: reply });
+        await sendWithRetry(sock, jid, reply);
       } catch (err) {
         console.error('Failed to build/send status reply:', err);
       }
@@ -94,4 +125,4 @@ async function startBridge({ authDir, allowedNumbers, haClient, thresholds }) {
   return sock;
 }
 
-module.exports = { startBridge, extractText, senderNumber, shouldHandleMessage };
+module.exports = { startBridge, extractText, senderNumber, shouldHandleMessage, sendWithRetry };

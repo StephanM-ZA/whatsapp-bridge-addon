@@ -1,4 +1,8 @@
 // src/index.js
+// Installed before anything else loads: libsignal starts dumping Signal
+// session private keys through console.log as soon as Baileys connects.
+require('./redactLogs').install();
+
 const { createHaClient } = require('./haClient');
 const { startBridge } = require('./whatsapp');
 
