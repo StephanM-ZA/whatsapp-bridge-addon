@@ -19,6 +19,10 @@ function editorHtml() {
     --fg:#faf9f6; --meta:#96918a; --teal:#00e5a0; --red:#ff6b6b; --radius:10px;
   }
   * { box-sizing:border-box; }
+  /* This page renders in an iframe, so it inherits nothing from the Home
+     Assistant theme - a native checkbox would draw itself Material blue, the
+     one colour this system does not use. */
+  input[type=checkbox] { accent-color:var(--teal); width:17px; height:17px; }
   body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 Inter,system-ui,sans-serif; }
   .wrap { max-width:820px; margin:0 auto; padding:20px 16px 120px; }
   h1 { font-size:22px; font-weight:800; margin:0 0 4px; }
