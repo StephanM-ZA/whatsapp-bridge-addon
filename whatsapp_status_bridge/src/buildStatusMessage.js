@@ -9,8 +9,11 @@ const ENTITIES = {
   gridConnected: 'sensor.solarman_grid_connected_status_2',
   gridPower: 'sensor.solarman_total_grid_power_2',
   solarForecastRemaining: 'sensor.solcast_pv_forecast_forecast_remaining_today',
-  mainGeyser: 'sensor.solarbot_110493863532580_geyser_1_internal_temp',
-  secondGeyser: 'sensor.solarbot_110493863532580_geyser_2_internal_temp',
+  // Solarbot slot 2 is the main geyser, slot 1 the second one (2026-09-18:
+  // this was the other way round here while the dashboard had it right, so
+  // the same tank read "Main" in WhatsApp and "Boys" on the dashboard).
+  mainGeyser: 'sensor.solarbot_110493863532580_geyser_2_internal_temp',
+  secondGeyser: 'sensor.solarbot_110493863532580_geyser_1_internal_temp',
   pm25: 'sensor.nobito_pm2_5',
   co2: 'sensor.nobito_carbon_dioxide',
   purifier1: 'fan.xiaomi_cpa4_6940_air_purifier',

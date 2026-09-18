@@ -40,8 +40,8 @@ const HAPPY_PATH_STATES = {
   'sensor.solarman_grid_connected_status_2': { state: 'On-Grid', attributes: {} },
   'sensor.solarman_total_grid_power_2': { state: '500', attributes: {} },
   'sensor.solcast_pv_forecast_forecast_remaining_today': { state: '2', attributes: {} },
-  'sensor.solarbot_110493863532580_geyser_1_internal_temp': { state: '45', attributes: {} },
-  'sensor.solarbot_110493863532580_geyser_2_internal_temp': { state: '30', attributes: {} },
+  'sensor.solarbot_110493863532580_geyser_2_internal_temp': { state: '45', attributes: {} },
+  'sensor.solarbot_110493863532580_geyser_1_internal_temp': { state: '30', attributes: {} },
   'sensor.nobito_pm2_5': { state: '12', attributes: {} },
   'sensor.nobito_carbon_dioxide': { state: '650', attributes: {} },
   'fan.xiaomi_cpa4_6940_air_purifier': { state: 'on', attributes: { preset_mode: 'Auto' } },
@@ -168,7 +168,7 @@ test('an unavailable (not just missing) entity renders N/A, not NaN', async () =
 test('one geyser unavailable renders that geyser as N/A, keeps the other reading, and skips Shower Call', async () => {
   const states = {
     ...HAPPY_PATH_STATES,
-    'sensor.solarbot_110493863532580_geyser_1_internal_temp': { state: 'unavailable', attributes: {} },
+    'sensor.solarbot_110493863532580_geyser_2_internal_temp': { state: 'unavailable', attributes: {} },
   };
   const haClient = fakeHaClient(states);
 
@@ -253,7 +253,7 @@ test('the OTHER quip branches are reachable too', async () => {
   const copy = defaults();
   copy.quips.showerCall.bothReady = 'Both hot.';
   const hot = { ...HAPPY_PATH_STATES,
-    'sensor.solarbot_110493863532580_geyser_2_internal_temp': { state: '50', attributes: {} } };
+    'sensor.solarbot_110493863532580_geyser_1_internal_temp': { state: '50', attributes: {} } };
   const msg = await buildStatusMessage(fakeHaClient(hot), THRESHOLDS, FIXED_NOW, copy);
   assert.ok(msg.includes('Both hot.'));
 });
